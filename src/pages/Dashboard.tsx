@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   TrendingUp, 
   TrendingDown, 
@@ -16,12 +17,28 @@ import {
   LogOut,
   User,
   Trophy,
-  AlertCircle
+  AlertCircle,
+  Plus,
+  Activity,
+  History
 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { User as SupabaseUser, Session } from "@supabase/supabase-js";
+import { PaymentModal } from "@/components/PaymentModal";
+import { TradingChart } from "@/components/TradingChart";
+import { AccountHistory } from "@/components/AccountHistory";
+import { NotificationSystem } from "@/components/NotificationSystem";
+
+interface TradingPlan {
+  id: string;
+  name: string;
+  price: number;
+  account_size: number;
+  profit_target: number;
+  max_drawdown: number;
+}
 
 interface UserChallenge {
   id: string;
@@ -51,7 +68,11 @@ const Dashboard = () => {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [challenges, setChallenges] = useState<UserChallenge[]>([]);
+  const [tradingPlans, setTradingPlans] = useState<TradingPlan[]>([]);
   const [loading, setLoading] = useState(true);
+  const [paymentModalOpen, setPaymentModalOpen] = useState(false);
+  const [selectedPlan, setSelectedPlan] = useState<TradingPlan | null>(null);
+  const [activeTab, setActiveTab] = useState('overview');
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -122,6 +143,19 @@ const Dashboard = () => {
         } else {
           setChallenges(challengesData || []);
         }
+
+        // Fetch available trading plans
+        const { data: plansData, error: plansError } = await supabase
+          .from('trading_plans')
+          .select('*')
+          .eq('is_active', true)
+          .order('price', { ascending: true });
+
+        if (plansError) {
+          console.error('Plans fetch error:', plansError);
+        } else {
+          setTradingPlans(plansData || []);
+        }
       } catch (error) {
         console.error('Data fetch error:', error);
         toast({
@@ -138,6 +172,11 @@ const Dashboard = () => {
       fetchUserData();
     }
   }, [user?.id, toast]);
+
+  const handlePurchasePlan = (plan: TradingPlan) => {
+    setSelectedPlan(plan);
+    setPaymentModalOpen(true);
+  };
 
   const handleLogout = async () => {
     try {
@@ -199,6 +238,7 @@ const Dashboard = () => {
             </Link>
 
             <div className="flex items-center space-x-4">
+              <NotificationSystem userId={user?.id || ''} />
               <span className="text-muted-foreground">
                 Welcome, {profile?.first_name || "Trader"}!
               </span>
@@ -211,21 +251,33 @@ const Dashboard = () => {
         </div>
       </header>
 
-      {/* Main Content */}
-      <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Welcome Section */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mb-8"
-        >
-          <h1 className="text-3xl font-bold mb-2">
-            Welcome back, {profile?.first_name || "Trader"}!
-          </h1>
-          <p className="text-muted-foreground">
-            Here's an overview of your trading activities and current challenges.
-          </p>
-        </motion.div>
+        {/* Main Content */}
+        <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          {/* Welcome Section */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-8"
+          >
+            <h1 className="text-3xl font-bold mb-2">
+              Welcome back, {profile?.first_name || "Trader"}!
+            </h1>
+            <p className="text-muted-foreground">
+              Here's an overview of your trading activities and current challenges.
+            </p>
+          </motion.div>
+
+          {/* Dashboard Tabs */}
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <TabsList className="grid w-full grid-cols-4">
+              <TabsTrigger value="overview">Overview</TabsTrigger>
+              <TabsTrigger value="trading">Live Trading</TabsTrigger>
+              <TabsTrigger value="purchase">Purchase Plans</TabsTrigger>
+              <TabsTrigger value="history">Account History</TabsTrigger>
+            </TabsList>
+
+            {/* Overview Tab */}
+            <TabsContent value="overview" className="space-y-6">
 
         {challenges.length === 0 ? (
           /* No Challenges State */
@@ -306,173 +358,126 @@ const Dashboard = () => {
               </Card>
             </motion.div>
 
-            {/* Challenge Cards */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2 }}
-              className="space-y-6"
-            >
-              <h2 className="text-2xl font-bold">Your Challenges</h2>
-              
-              <div className="grid gap-6">
-                {challenges.map((challenge) => {
-                  const profitPercentage = challenge.trading_plans.account_size > 0 
-                    ? ((challenge.total_profit || 0) / challenge.trading_plans.account_size) * 100
-                    : 0;
+            {/* Trading Tab */}
+            <TabsContent value="trading" className="space-y-6">
+              <div className="grid lg:grid-cols-3 gap-6">
+                <div className="lg:col-span-2">
+                  <TradingChart symbol="BTCUSDT" height={500} />
+                </div>
+                <div className="space-y-4">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-lg">Market Watchlist</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      {['BTCUSDT', 'ETHUSDT', 'ADAUSDT', 'SOLUSDT'].map((symbol) => (
+                        <div key={symbol} className="flex items-center justify-between p-2 rounded hover:bg-muted/50 cursor-pointer">
+                          <span className="font-medium">{symbol.replace('USDT', '/USDT')}</span>
+                          <Badge variant="outline">+2.34%</Badge>
+                        </div>
+                      ))}
+                    </CardContent>
+                  </Card>
                   
-                  const targetReached = profitPercentage >= challenge.trading_plans.profit_target;
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-lg">Trading Tips</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-2 text-sm text-muted-foreground">
+                        <p>• Always use proper risk management</p>
+                        <p>• Never risk more than 2% per trade</p>
+                        <p>• Keep a trading journal</p>
+                        <p>• Follow your trading plan</p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              </div>
+            </TabsContent>
 
-                  return (
-                    <Card key={challenge.id} className="border-l-4 border-l-primary">
-                      <CardHeader>
-                        <div className="flex justify-between items-start">
-                          <div>
-                            <CardTitle className="flex items-center gap-2">
-                              {challenge.trading_plans.name}
-                              <Badge className={`${getStatusColor(challenge.status)} text-white`}>
-                                {challenge.status.toUpperCase()}
-                              </Badge>
-                            </CardTitle>
-                            <CardDescription>
-                              Account Size: {formatCurrency(challenge.trading_plans.account_size)}
-                            </CardDescription>
+            {/* Purchase Plans Tab */}
+            <TabsContent value="purchase" className="space-y-6">
+              <div className="text-center mb-8">
+                <h2 className="text-2xl font-bold mb-2">Choose Your Trading Plan</h2>
+                <p className="text-muted-foreground">
+                  Select the account size that matches your trading experience and risk tolerance.
+                </p>
+              </div>
+              
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {tradingPlans.map((plan) => (
+                  <motion.div
+                    key={plan.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    whileHover={{ y: -5 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    <Card className="relative overflow-hidden border-2 hover:border-primary/20 transition-colors">
+                      <div className="absolute top-0 right-0 w-0 h-0 border-l-[50px] border-b-[50px] border-l-transparent border-b-primary/10"></div>
+                      
+                      <CardHeader className="text-center">
+                        <CardTitle className="text-xl">{plan.name}</CardTitle>
+                        <div className="space-y-2">
+                          <div className="text-3xl font-bold text-primary">
+                            ${plan.price.toLocaleString()}
                           </div>
-                          <div className="text-right">
-                            <div className="text-2xl font-bold">
-                              {formatCurrency(challenge.current_balance || challenge.trading_plans.account_size)}
-                            </div>
-                            <div className="text-sm text-muted-foreground">Current Balance</div>
-                          </div>
+                          <Badge className="bg-gradient-to-r from-primary to-accent text-white">
+                            ${plan.account_size.toLocaleString()} Account
+                          </Badge>
                         </div>
                       </CardHeader>
                       
                       <CardContent className="space-y-4">
-                        {/* Progress Bar */}
-                        <div>
-                          <div className="flex justify-between text-sm mb-2">
-                            <span>Profit Target Progress</span>
-                            <span className={targetReached ? 'text-green-500 font-semibold' : ''}>
-                              {profitPercentage.toFixed(1)}% / {challenge.trading_plans.profit_target}%
-                            </span>
+                        <div className="space-y-3">
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Profit Target:</span>
+                            <span className="font-semibold">{plan.profit_target}%</span>
                           </div>
-                          <Progress 
-                            value={Math.min(profitPercentage, challenge.trading_plans.profit_target)} 
-                            className="h-2"
-                          />
-                        </div>
-
-                        {/* Stats Grid */}
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                          <div className="text-center p-3 bg-muted/20 rounded-lg">
-                            <div className="text-sm text-muted-foreground mb-1">Total P&L</div>
-                            <div className={`font-semibold ${
-                              (challenge.total_profit || 0) >= 0 ? 'text-green-500' : 'text-red-500'
-                            }`}>
-                              {formatCurrency(challenge.total_profit || 0)}
-                            </div>
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Max Drawdown:</span>
+                            <span className="font-semibold">{plan.max_drawdown}%</span>
                           </div>
-                          
-                          <div className="text-center p-3 bg-muted/20 rounded-lg">
-                            <div className="text-sm text-muted-foreground mb-1">Highest Balance</div>
-                            <div className="font-semibold">
-                              {formatCurrency(challenge.highest_balance || challenge.trading_plans.account_size)}
-                            </div>
-                          </div>
-                          
-                          <div className="text-center p-3 bg-muted/20 rounded-lg">
-                            <div className="text-sm text-muted-foreground mb-1">Trading Days</div>
-                            <div className="font-semibold">{challenge.trading_days || 0}</div>
-                          </div>
-                          
-                          <div className="text-center p-3 bg-muted/20 rounded-lg">
-                            <div className="text-sm text-muted-foreground mb-1">Max Drawdown</div>
-                            <div className="font-semibold">{challenge.trading_plans.max_drawdown}%</div>
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Payment:</span>
+                            <span className="font-semibold text-green-600">USDT TRC20</span>
                           </div>
                         </div>
-
-                        {/* Action Buttons */}
-                        <div className="flex gap-3 pt-4">
-                          <Button className="flex-1">
-                            View Details
-                          </Button>
-                          {challenge.status === 'active' && (
-                            <Button variant="outline" className="flex-1">
-                              Trading Platform
-                            </Button>
-                          )}
-                        </div>
+                        
+                        <Button 
+                          onClick={() => handlePurchasePlan(plan)}
+                          className="w-full bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90"
+                        >
+                          <Plus className="h-4 w-4 mr-2" />
+                          Purchase Now
+                        </Button>
                       </CardContent>
                     </Card>
-                  );
-                })}
+                  </motion.div>
+                ))}
               </div>
-            </motion.div>
+            </TabsContent>
+
+            {/* History Tab */}
+            <TabsContent value="history" className="space-y-6">
+              {user?.id && <AccountHistory userId={user.id} />}
+            </TabsContent>
+          </Tabs>
           </>
         )}
 
-        {/* Action Cards */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-          className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mt-8"
-        >
-          <Card className="hover:border-primary/20 transition-colors cursor-pointer">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <CreditCard className="h-5 w-5" />
-                Purchase New Plan
-              </CardTitle>
-              <CardDescription>
-                Start a new challenge with our range of account sizes
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Link to="/plans">
-                <Button className="w-full">Browse Plans</Button>
-              </Link>
-            </CardContent>
-          </Card>
+        </main>
 
-          <Card className="hover:border-primary/20 transition-colors cursor-pointer">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <BarChart3 className="h-5 w-5" />
-                Performance Analytics
-              </CardTitle>
-              <CardDescription>
-                Detailed analysis of your trading performance
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Button variant="outline" className="w-full">
-                View Analytics
-              </Button>
-            </CardContent>
-          </Card>
+        {/* Payment Modal */}
+        <PaymentModal
+          isOpen={paymentModalOpen}
+          onClose={() => setPaymentModalOpen(false)}
+          plan={selectedPlan}
+          userId={user?.id || ''}
+        />
+      </div>
+    );
+  };
 
-          <Card className="hover:border-primary/20 transition-colors cursor-pointer">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <User className="h-5 w-5" />
-                Account Settings
-              </CardTitle>
-              <CardDescription>
-                Update your profile and preferences
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Button variant="outline" className="w-full">
-                <Settings className="h-4 w-4 mr-2" />
-                Settings
-              </Button>
-            </CardContent>
-          </Card>
-        </motion.div>
-      </main>
-    </div>
-  );
-};
-
-export default Dashboard;
+  export default Dashboard;
