@@ -12,7 +12,7 @@ const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 // Main wallet address for receiving USDT TRC20 payments
-const MAIN_WALLET_ADDRESS = "TQB9TjZJDhFZ2CgKyY7Q8W5gF8zKh6xEXM"; // Replace with actual wallet
+const MAIN_WALLET_ADDRESS = "TV386Let8mNrkzDV5aKLgxXjFWNE3qnQxM";
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
