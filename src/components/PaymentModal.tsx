@@ -282,6 +282,7 @@ export const PaymentModal = ({ isOpen, onClose, plan, userId }: PaymentModalProp
                   placeholder="Enter transaction hash from your wallet"
                   value={transactionHash}
                   onChange={(e) => setTransactionHash(e.target.value)}
+                  className="font-mono text-sm"
                 />
                 <Button
                   onClick={verifyPayment}
