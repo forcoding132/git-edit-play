@@ -172,7 +172,7 @@ const Auth = () => {
         {/* Logo */}
         <div className="text-center mb-8">
           <Link to="/" className="inline-flex items-center space-x-3">
-            <img src="/src/assets/nova-logo.png" alt="Nova Funded Traders" className="h-10 w-auto" />
+            <img src="/nova-logo.png" alt="Nova Funded Traders" className="h-10 w-auto" />
             <span className="text-2xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
               Nova Funded Traders
             </span>

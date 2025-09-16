@@ -26,7 +26,7 @@ const Header = () => {
         <div className="flex justify-between items-center py-4">
           {/* Logo */}
           <Link to="/" className="flex items-center space-x-3">
-            <img src="/src/assets/nova-logo.png" alt="Nova Funded Traders" className="h-8 w-auto" />
+            <img src="/nova-logo.png" alt="Nova Funded Traders" className="h-8 w-auto" />
             <span className="text-xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
               Nova Funded Traders
             </span>

@@ -231,7 +231,7 @@ const Dashboard = () => {
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-4">
             <Link to="/" className="flex items-center space-x-3">
-              <img src="/src/assets/nova-logo.png" alt="Nova Funded Traders" className="h-8 w-auto" />
+              <img src="/nova-logo.png" alt="Nova Funded Traders" className="h-8 w-auto" />
               <span className="text-xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
                 Nova Funded Traders
               </span>
@@ -251,33 +251,33 @@ const Dashboard = () => {
         </div>
       </header>
 
-        {/* Main Content */}
-        <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          {/* Welcome Section */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="mb-8"
-          >
-            <h1 className="text-3xl font-bold mb-2">
-              Welcome back, {profile?.first_name || "Trader"}!
-            </h1>
-            <p className="text-muted-foreground">
-              Here's an overview of your trading activities and current challenges.
-            </p>
-          </motion.div>
+      {/* Main Content */}
+      <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Welcome Section */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-8"
+        >
+          <h1 className="text-3xl font-bold mb-2">
+            Welcome back, {profile?.first_name || "Trader"}!
+          </h1>
+          <p className="text-muted-foreground">
+            Here's an overview of your trading activities and current challenges.
+          </p>
+        </motion.div>
 
-          {/* Dashboard Tabs */}
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-4">
-              <TabsTrigger value="overview">Overview</TabsTrigger>
-              <TabsTrigger value="trading">Live Trading</TabsTrigger>
-              <TabsTrigger value="purchase">Purchase Plans</TabsTrigger>
-              <TabsTrigger value="history">Account History</TabsTrigger>
-            </TabsList>
+        {/* Dashboard Tabs */}
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="grid w-full grid-cols-4">
+            <TabsTrigger value="overview">Overview</TabsTrigger>
+            <TabsTrigger value="trading">Live Trading</TabsTrigger>
+            <TabsTrigger value="purchase">Purchase Plans</TabsTrigger>
+            <TabsTrigger value="history">Account History</TabsTrigger>
+          </TabsList>
 
-            {/* Overview Tab */}
-            <TabsContent value="overview" className="space-y-6">
+          {/* Overview Tab */}
+          <TabsContent value="overview" className="space-y-6">
 
         {challenges.length === 0 ? (
           /* No Challenges State */
@@ -292,11 +292,12 @@ const Dashboard = () => {
               <p className="text-muted-foreground mb-8">
                 You haven't started any challenges yet. Choose a trading plan that matches your experience and goals.
               </p>
-              <Link to="/plans">
-                <Button className="bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90">
-                  Browse Trading Plans
-                </Button>
-              </Link>
+              <Button 
+                onClick={() => setActiveTab('purchase')}
+                className="bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90"
+              >
+                Browse Trading Plans
+              </Button>
             </div>
           </motion.div>
         ) : (
@@ -358,43 +359,114 @@ const Dashboard = () => {
               </Card>
             </motion.div>
 
-            {/* Trading Tab */}
-            <TabsContent value="trading" className="space-y-6">
-              <div className="grid lg:grid-cols-3 gap-6">
-                <div className="lg:col-span-2">
-                  <TradingChart symbol="BTCUSDT" height={500} />
-                </div>
-                <div className="space-y-4">
-                  <Card>
+            {/* Active Challenges Display */}
+            <div className="space-y-6">
+              {challenges.map((challenge) => (
+                <motion.div
+                  key={challenge.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.2 }}
+                >
+                  <Card className="border-l-4 border-l-primary">
                     <CardHeader>
-                      <CardTitle className="text-lg">Market Watchlist</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-3">
-                      {['BTCUSDT', 'ETHUSDT', 'ADAUSDT', 'SOLUSDT'].map((symbol) => (
-                        <div key={symbol} className="flex items-center justify-between p-2 rounded hover:bg-muted/50 cursor-pointer">
-                          <span className="font-medium">{symbol.replace('USDT', '/USDT')}</span>
-                          <Badge variant="outline">+2.34%</Badge>
+                      <div className="flex justify-between items-center">
+                        <CardTitle className="flex items-center gap-2">
+                          {challenge.trading_plans.name}
+                          <Badge className={getStatusColor(challenge.status)}>
+                            {challenge.status.charAt(0).toUpperCase() + challenge.status.slice(1)}
+                          </Badge>
+                        </CardTitle>
+                        <div className="text-right">
+                          <div className="text-sm text-muted-foreground">Current Balance</div>
+                          <div className="text-lg font-bold">
+                            {formatCurrency(challenge.current_balance || 0)}
+                          </div>
                         </div>
-                      ))}
-                    </CardContent>
-                  </Card>
-                  
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="text-lg">Trading Tips</CardTitle>
+                      </div>
                     </CardHeader>
                     <CardContent>
-                      <div className="space-y-2 text-sm text-muted-foreground">
-                        <p>• Always use proper risk management</p>
-                        <p>• Never risk more than 2% per trade</p>
-                        <p>• Keep a trading journal</p>
-                        <p>• Follow your trading plan</p>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                        <div>
+                          <div className="text-sm text-muted-foreground">Account Size</div>
+                          <div className="font-semibold">
+                            {formatCurrency(challenge.trading_plans.account_size)}
+                          </div>
+                        </div>
+                        <div>
+                          <div className="text-sm text-muted-foreground">Profit Target</div>
+                          <div className="font-semibold text-green-600">
+                            {challenge.trading_plans.profit_target}%
+                          </div>
+                        </div>
+                        <div>
+                          <div className="text-sm text-muted-foreground">Max Drawdown</div>
+                          <div className="font-semibold text-red-600">
+                            {challenge.trading_plans.max_drawdown}%
+                          </div>
+                        </div>
                       </div>
+                      
+                      {challenge.status === 'active' && (
+                        <div className="space-y-2">
+                          <div className="flex justify-between text-sm">
+                            <span>Progress to Target</span>
+                            <span>
+                              {((challenge.total_profit || 0) / challenge.trading_plans.profit_target * 100).toFixed(1)}%
+                            </span>
+                          </div>
+                          <Progress 
+                            value={(challenge.total_profit || 0) / challenge.trading_plans.profit_target * 100} 
+                            className="h-2"
+                          />
+                        </div>
+                      )}
                     </CardContent>
                   </Card>
+                </motion.div>
+              ))}
+            </div>
+          </>
+        )}
+      </TabsContent>
+
+      {/* Trading Tab */}
+      <TabsContent value="trading" className="space-y-6">
+        <div className="grid lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2">
+            <TradingChart symbol="BTCUSDT" height={500} />
+          </div>
+          <div className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Market Watchlist</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {['BTCUSDT', 'ETHUSDT', 'ADAUSDT', 'SOLUSDT'].map((symbol) => (
+                  <div key={symbol} className="flex items-center justify-between p-2 rounded hover:bg-muted/50 cursor-pointer">
+                    <span className="font-medium">{symbol.replace('USDT', '/USDT')}</span>
+                    <Badge variant="outline">+2.34%</Badge>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Trading Tips</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2 text-sm text-muted-foreground">
+                  <p>• Always use proper risk management</p>
+                  <p>• Never risk more than 2% per trade</p>
+                  <p>• Keep a trading journal</p>
+                  <p>• Follow your trading plan</p>
                 </div>
-              </div>
-            </TabsContent>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </TabsContent>
 
             {/* Purchase Plans Tab */}
             <TabsContent value="purchase" className="space-y-6">
@@ -459,25 +531,22 @@ const Dashboard = () => {
               </div>
             </TabsContent>
 
-            {/* History Tab */}
-            <TabsContent value="history" className="space-y-6">
-              {user?.id && <AccountHistory userId={user.id} />}
-            </TabsContent>
-          </Tabs>
-          </>
-        )}
+          {/* History Tab */}
+          <TabsContent value="history" className="space-y-6">
+            {user?.id && <AccountHistory userId={user.id} />}
+          </TabsContent>
+        </Tabs>
+      </main>
 
-        </main>
+      {/* Payment Modal */}
+      <PaymentModal
+        isOpen={paymentModalOpen}
+        onClose={() => setPaymentModalOpen(false)}
+        plan={selectedPlan}
+        userId={user?.id || ''}
+      />
+    </div>
+  );
+};
 
-        {/* Payment Modal */}
-        <PaymentModal
-          isOpen={paymentModalOpen}
-          onClose={() => setPaymentModalOpen(false)}
-          plan={selectedPlan}
-          userId={user?.id || ''}
-        />
-      </div>
-    );
-  };
-
-  export default Dashboard;
+export default Dashboard;
